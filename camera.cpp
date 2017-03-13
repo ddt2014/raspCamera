@@ -1,5 +1,6 @@
 #include "camera.h"
 
+
 vector<FILE*> CAMERA :: fp;
 long CAMERA :: bufferStamp = 0;
 int CAMERA :: bufferCount = 0;
@@ -9,6 +10,7 @@ int CAMERA :: picNum = 0;
 int64_t CAMERA :: stamp = 0;
 uint64_t CAMERA :: returnTimeStamp = 0;
 bool CAMERA :: ifSavePic = false;
+bool CAMERA :: ifStopCamera = false;
 string CAMERA :: savedFileName = "";
 
 int fill_port_buffer(MMAL_PORT_T *port, MMAL_POOL_T *pool) {
@@ -148,11 +150,11 @@ bool  CAMERA :: setupCamera(PORT_USERDATA *userdata) {
         return false;
     }
 
-//    status = mmal_component_enable(camera);
-//    if (status != MMAL_SUCCESS) { 
-//        printf("Error: unable to enable camera (%u)\n", status);
-//        return false;
-//    }
+    status = mmal_component_enable(camera);
+    if (status != MMAL_SUCCESS) { 
+        printf("Error: unable to enable camera (%u)\n", status);
+        return false;
+    }
 
     fill_port_buffer(userdata->camera_still_port, userdata->camera_still_port_pool);
 
@@ -323,14 +325,33 @@ bool CAMERA :: initCamera() {
 	return true;
 }
 
+void CAMERA :: stopCamera()
+{
+    ifStopCamera = true;
+    if (mmal_port_parameter_set_boolean(userdata.camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS) 
+        printf("%s: Failed to stop capture\n", __func__);
+
+    mmal_port_parameter_set_boolean(userdata.camera_video_port, MMAL_PARAMETER_CAPTURE, 0);
+    mmal_component_disable(userdata.camera);
+    mmal_component_disable(userdata.preview);
+
+    mmal_port_disable(userdata.camera_preview_port);
+    mmal_port_disable(userdata.camera_still_port);
+    mmal_port_disable(userdata.encoder_output_port);
+    mmal_port_disable(userdata.encoder_input_port);
+
+    mmal_port_pool_destroy(userdata.encoder_output_port, userdata.encoder_output_pool);
+    mmal_port_pool_destroy(userdata.camera_still_port, userdata.camera_still_port_pool);
+
+    mmal_component_destroy(userdata.encoder);
+    mmal_component_destroy(userdata.preview);
+    mmal_component_destroy(userdata.camera);
+    ifStopCamera = false;
+}
+
 void CAMERA :: startCamera()
 {
-    MMAL_STATUS_T status;
-
-//    status = mmal_component_enable(userdata.camera);
-//    if (status != MMAL_SUCCESS) { 
-//        printf("Error: unable to enable camera (%u)\n", status);
-//    }
+	initCamera();
 }       
 
 void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
@@ -353,6 +374,7 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
         mmal_buffer_header_mem_lock(buffer);
         bytes_written = fwrite(buffer->data, 1, buffer->length, file);
         mmal_buffer_header_mem_unlock(buffer);
+
         if (bytes_written != buffer->length) {
             printf("Failed to write buffer data ()- aborting");
         } 
@@ -372,6 +394,10 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
         }
     }
 
+    if(ifStopCamera == false) {
+    	if (mmal_port_parameter_set_boolean(userdata->camera_still_port, MMAL_PARAMETER_CAPTURE, 0) != MMAL_SUCCESS) 
+        printf("%s: Failed to stop capture\n", __func__);
+    }
 }
 
  void CAMERA :: encoder_output_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
@@ -381,6 +407,7 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
     int bytes_written;
     int64_t currentTime;
     uint64_t time;
+
     if(bufferCount) {
         mmal_buffer_header_mem_lock(buffer);
         bytes_written = fwrite(buffer->data, 1, buffer->length, fp[0]);

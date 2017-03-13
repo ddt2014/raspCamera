@@ -13,7 +13,7 @@
 #include "interface/vcos/vcos.h"
 
 #define SOCK_PORT 44960
-#define BUFFER_LENGTH 2048
+#define BUFFER_LENGTH 1024
 #define IP_ADDRESS "192.168.1.100"
 
 using namespace std;
@@ -23,7 +23,7 @@ class ClientSocket
 private:
     int status;
     struct sockaddr_in serverAddr;
-	CAMERA camera;
+	CAMERA* camera;
 
 public:
 	int serverSocket;
@@ -32,7 +32,7 @@ public:
 	static void* recieveMessage(void* socket);
 	bool initSocket();
 	bool sendFile(string name);
-	void savePics(string& name);
+	void savePics();
 	void saveVideo(int bufferCount);
 	void changeFPS(const int fps, const int frame); 
 	void changeShutterSpeed(const int speed); 

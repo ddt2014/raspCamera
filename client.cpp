@@ -1,4 +1,3 @@
-
 #include "client.h"
 #define CommandStart					0
 #define CommandSavePicture        1
@@ -13,12 +12,13 @@
 
 bool ClientSocket ::  initSocket()
 {
-	if(!camera.initCamera())
+	camera = new CAMERA();
+	if(!camera->initCamera())
 	{
 		cout << "init camera failed!" << endl;
 		return false;
 	}
-	serverSocket = socket(AF_INET,SOCK_STREAM,0);       //ipv4,TCP
+	serverSocket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);       //ipv4,TCP
     if(serverSocket == -1)
     {
         cout << "socket error!" << endl;
@@ -95,9 +95,9 @@ void ClientSocket :: saveVideo(int bufferCount) {
 	CAMERA :: setupSaveVideo(bufferCount);
 }
 
-void ClientSocket :: savePics(string & name) {
+void ClientSocket :: savePics() {
 	cout<<"saving pic"<<endl;
-	camera.setupSavePic();
+	camera->setupSavePic();
 }
 
 void ClientSocket :: changeFPS(const int fps, const int frame) {
@@ -106,7 +106,7 @@ void ClientSocket :: changeFPS(const int fps, const int frame) {
 }
 
 void ClientSocket :: changeShutterSpeed(const int speed) {
-	camera.changeShutterSpeed(speed);
+	camera->changeShutterSpeed(speed);
 }
 
 void ClientSocket :: parseCommad(const char* command) {
@@ -129,7 +129,7 @@ void ClientSocket :: parseCommad(const char* command) {
 		commandNum = CommandChangeFPS;
 	else 	if(command[0] == 'h')
 		commandNum = CommandChangeShutterSpeed;
-	else 	if(command[0] == 'q')
+	else 	if(command[0] == 't')
 		commandNum = CommandStop;
 
 	switch(commandNum)
@@ -138,7 +138,12 @@ void ClientSocket :: parseCommad(const char* command) {
 	
 		{
 			cout << command << endl;
-			camera.startCamera();
+			camera = new CAMERA();
+			if(!camera->initCamera())
+			{
+				cout << "init camera failed!" << endl;
+			}
+		//	camera->startCamera();
 			break;
 		}
 		case CommandSavePicture: 
@@ -160,7 +165,7 @@ void ClientSocket :: parseCommad(const char* command) {
 		{
 			cout << "command : " << command << endl;
 			string temp;
-			savePics(temp);
+			savePics();
 			vcos_sleep(500);
 			temp = CAMERA :: savedFileName;
 			string message = "starting transfer file";
@@ -186,6 +191,10 @@ void ClientSocket :: parseCommad(const char* command) {
 		{
 			cout << command << endl;
 //			startCamera(true);
+			for(int i = 0; i < 10; ++i) {
+				savePics();
+				vcos_sleep(900);
+			}
 			break;
 		}
 		case CommandRunCameraWithOUTPreview: 
@@ -213,6 +222,8 @@ void ClientSocket :: parseCommad(const char* command) {
 		case CommandStop: 
 		{
 			cout << command << endl;
+			camera->stopCamera();
+			delete camera;
 			break;
 		}
          

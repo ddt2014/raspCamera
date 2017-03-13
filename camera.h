@@ -60,6 +60,7 @@ private:
 public:
 	static vector<FILE*> fp;
 	static bool ifSavePic;
+	static bool ifStopCamera;
 	static int picNum;
 	static int64_t stamp;
 	static uint64_t returnTimeStamp;
@@ -76,6 +77,7 @@ public:
 	bool setupNoPreview(PORT_USERDATA *userdata);
 //	static void* startCamera(void* pThis);
 	void startCamera();
+	void stopCamera();
 	static void camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 	static void encoder_output_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 
