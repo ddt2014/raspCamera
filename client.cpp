@@ -4,7 +4,7 @@
 #define CommandSaveVideo          2
 #define CommandSynchronize       3
 #define CommandTransferFile       4
-#define CommandRunCameraWithPreview       5
+#define CommandCleanFiles 	  5
 #define CommandRunCameraWithOUTPreview       6
 #define CommandChangeFPS       7
 #define CommandChangeShutterSpeed       8
@@ -69,7 +69,7 @@ bool ClientSocket :: sendMessage(const char* command) {
 }	
 
 bool ClientSocket :: sendFile(string name) {
-	char buffer[BUFFER_LENGTH];  
+	char *buffer = new char[BUFFER_LENGTH];  
 	int sendLen;
 	FILE* fp = fopen(name.c_str(), "r");  
     if (fp == NULL) {
@@ -86,6 +86,7 @@ bool ClientSocket :: sendFile(string name) {
        bzero(buffer, sizeof(buffer));  
     }  
     fclose(fp);  
+    delete buffer;
     cout << "File Transfer Finished!" << endl;  
 	return true;
 }
@@ -121,8 +122,8 @@ void ClientSocket :: parseCommad(const char* command) {
 		commandNum = CommandSynchronize;
 	else 	if(command[0] == 'f')
 		commandNum = CommandTransferFile;
-	else 	if(command[0] == 'r')
-		commandNum = CommandRunCameraWithPreview;
+	else 	if(strcmp(command, "clean") == 0)
+		commandNum = CommandCleanFiles;
 	else 	if(command[0] == 'u')
 		commandNum = CommandRunCameraWithOUTPreview;
 	else 	if(command[0] == 'c')
@@ -187,14 +188,11 @@ void ClientSocket :: parseCommad(const char* command) {
 			sendMessage(message.c_str());
 			break;
 		}
-		case CommandRunCameraWithPreview: 
+		case CommandCleanFiles: 
 		{
 			cout << command << endl;
-//			startCamera(true);
-			for(int i = 0; i < 10; ++i) {
-				savePics();
-				vcos_sleep(900);
-			}
+			string command = "rm *w";
+            		system(command.c_str());
 			break;
 		}
 		case CommandRunCameraWithOUTPreview: 

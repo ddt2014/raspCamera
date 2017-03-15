@@ -1,6 +1,5 @@
 #include "camera.h"
 
-
 vector<FILE*> CAMERA :: fp;
 long CAMERA :: bufferStamp = 0;
 int CAMERA :: bufferCount = 0;
@@ -12,6 +11,8 @@ uint64_t CAMERA :: returnTimeStamp = 0;
 bool CAMERA :: ifSavePic = false;
 bool CAMERA :: ifStopCamera = false;
 string CAMERA :: savedFileName = "";
+struct timeval CAMERA :: start = {};
+struct timeval CAMERA :: end = {};
 
 int fill_port_buffer(MMAL_PORT_T *port, MMAL_POOL_T *pool) {
     int q;
@@ -359,15 +360,19 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
     PORT_USERDATA *userdata = (PORT_USERDATA *) port->userdata;
     MMAL_POOL_T *pool = userdata->camera_still_port_pool;
 
+        struct  timeval temp;
+        unsigned  long diff;
+        gettimeofday(&temp, NULL);
+
     if(buffer->length > 5) {
         int bytes_written;
         int64_t currentTime;
         currentTime = buffer->pts;
         savedFileName = ".raw";
         while(currentTime > 0) {
-        	savedFileName = "0" + savedFileName;
-        	savedFileName[0] += currentTime % 10;
-        	currentTime /= 10;
+                savedFileName = "0" + savedFileName;
+                savedFileName[0] += currentTime % 10;
+                currentTime /= 10;
         }
         FILE* file = fopen(savedFileName.c_str(), "w");
 
@@ -377,11 +382,17 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
 
         if (bytes_written != buffer->length) {
             printf("Failed to write buffer data ()- aborting");
-        } 
+        }
         fclose(file);
         cout << "pic :" << savedFileName << " saved." <<  endl;
     }
-    
+
+        gettimeofday(&end,NULL);
+        diff = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
+        printf("\t \t \t the difference is %ld", diff);
+        diff = 1000000 * (end.tv_sec - temp.tv_sec) + end.tv_usec - temp.tv_usec;
+        printf("\t %ld\n", diff);
+ 
     mmal_buffer_header_release(buffer);
     if (port->is_enabled) {
         MMAL_STATUS_T status;
@@ -398,6 +409,12 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
     	if (mmal_port_parameter_set_boolean(userdata->camera_still_port, MMAL_PARAMETER_CAPTURE, 0) != MMAL_SUCCESS) 
         printf("%s: Failed to stop capture\n", __func__);
     }
+    userdata = NULL;
+    new_buffer = NULL;
+    pool = NULL;
+    delete(userdata);
+    delete(new_buffer);
+    delete(pool);
 }
 
  void CAMERA :: encoder_output_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
@@ -474,6 +491,12 @@ void CAMERA :: camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *
             printf("3Unable to return a buffer to the video port\n");
         }
     }
+    userdata = NULL;
+    new_buffer = NULL;
+    pool = NULL;
+    delete(userdata);
+    delete(new_buffer);
+    delete(pool);
 }
 
 void CAMERA :: setupSaveVideo(int bufferC) {// save video
@@ -491,6 +514,9 @@ void CAMERA :: setupSaveVideo(int bufferC) {// save video
 void CAMERA :: setupSavePic() {// save pic
     if (mmal_port_parameter_set_boolean(userdata.camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS) 
         printf("%s: Failed to start capture\n", __func__);
+    gettimeofday(&start,NULL);
+	int64_t currentTime = vcos_getmicrosecs64() ;
+    printf("\t \t %" PRId64 "\n", currentTime);
 }
 
 void CAMERA :: closeFiles() {

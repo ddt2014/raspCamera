@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <sys/time.h>
 
 #include "bcm_host.h"
 #include "interface/vcos/vcos.h"
@@ -69,6 +70,7 @@ public:
 	static int FPS;
 	static long bufferStamp;
 	static string savedFileName; // save a pic or a video , the name
+	static struct  timeval start, end;
 
 	bool initCamera();
 	bool setupCamera(PORT_USERDATA *userdata);
